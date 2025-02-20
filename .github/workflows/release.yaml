@@ -1,0 +1,41 @@
+name: Build and Release Packages
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-packages:
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y \
+          build-essential dpkg-dev debhelper rpm
+          # Install Python dependencies, including 'build' module
+          python3 -m pip install --upgrade pip
+          python3 -m pip install build
+
+      - name: Build .deb and .rpm packages
+        run: make pkg
+
+      - name: Upload .deb and .rpm packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-packages
+          path: dist/*.{deb,rpm}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        with:
+          files: |
+            dist/*.deb
+            dist/*.rpm
+          generate_release_notes: true
